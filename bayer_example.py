@@ -162,7 +162,7 @@ for plane in range(3):
 output = (output >> 2).astype(np.uint8)
 with open('image.data', 'wb') as f:
     output.tofile(f)
-This recipe is also encapsulated in the PiBayerArray class in the picamera.array module, which means the same can be achieved as follows:
+# This recipe is also encapsulated in the PiBayerArray class in the picamera.array module, which means the same can be achieved as follows:
 
 import time
 import picamera

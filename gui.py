@@ -1,12 +1,34 @@
 import Tkinter
+from Tkinter import *
+#from Tkinter import Button
+from picamera import PiCamera
+from picamera import array
+import time
+import cv2
+import Image
+import ImageTk
 
-class App(Tkinter.Tk):
+class SpectrometerGUI(Tkinter.Tk):
     def __init__(self):
+        
         Tkinter.Tk.__init__(self)
+        self.title = "Heriot-Watt University Pi Spectrometer"
+        self.wm_title = self.title
         self.label = Tkinter.Label(text="Image", compound="top")
         self.label.pack(side="top", padx=8, pady=8)
         self.iteration=0
-        self.UpdateImage(1000)
+        self.UpdateImage(10)
+
+        self.analyseButton = Button(self, text = "Analyse", fg  = "blue", command = self.buttonClicked)
+        self.analyseButton.pack(side = BOTTOM)
+
+        #self.bind("<Button-1>", )
+        #self.pack()
+    def buttonClicked(self):
+        self.analyseButton["text"] = "Analysing"
+        self.analyseButton["state"] = 'disabled'
+        self.doAnalysis()
+        self.analyseButton["state"] = "normal"
 
     def UpdateImage(self, delay, event=None):
         self.iteration += 1
@@ -16,16 +38,27 @@ class App(Tkinter.Tk):
         self.after(delay, self.UpdateImage, 1000)
 
     def get_image(self):
-        data = '''
-            R0lGODlhIAAgALMAAAAAAAAAgHCAkC6LV76+vvXeswD/ANzc3DLNMubm+v/6zS9PT6Ai8P8A////
-            /////yH5BAEAAAkALAAAAAAgACAAAAS00MlJq7046803AF3ofAYYfh8GIEvpoUZcmtOKAO5rLMva
-            0rYVKqX5IEq3XDAZo1GGiOhw5rtJc09cVGo7orYwYtYo3d4+DBxJWuSCAQ30+vNTGcxnOIARj3eT
-            YhJDQ3woDGl7foNiKBV7aYeEkHEignKFkk4ciYaImJqbkZ+PjZUjaJOElKanqJyRrJyZgSKkokOs
-            NYa2q7mcirC5I5FofsK6hcHHgsSgx4a9yzXK0rrV19gRADs=
-        '''
-        image = Tkinter.PhotoImage(data=data)
-        return image
+        #Create an instance of PiCamera
+        camera = PiCamera()
+        #Configure the capture technique
+        capture = array.PiRGBArray(camera)
+        #Set the camera resolution
+        camera.resolution = (640, 480)
+        #camera.start_preview()
+        #time.sleep(3)
+        camera.capture(capture, format ="bgr")
+        img = capture.array
+        b,g,r = cv2.split(img)
+        img2 = cv2.merge((r,g,b))
+        imgFromArray = Image.fromarray(img2)
+        imgtk = ImageTk.PhotoImage(image=imgFromArray)
+        #Tkinter.Label(self, image = imgtk).pack()
+        camera.close()
+        return imgtk
+
+    def doAnalysis(self):
+        
 
 if __name__ == "__main__":
-    app=App()
+    app = SpectrometerGUI()
     app.mainloop()
