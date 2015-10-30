@@ -51,14 +51,23 @@ def wavelength_comparator(x, y):
         else:
             return False
 
-def calc_intensities(labels, wavelength_intensities):
+def calc_intensities(labels, wavelength_intensities, scale = False):
     intensities = [0]*len(labels)
     for wi in wavelength_intensities:
         #Find the position on the graph where the intensity belongs
-        p = labels.index(wi[0])
-        #Add the intensity into the new intensities array at the correct location
-        intensities[p] += wi[1]
-        return intensities
+        #print "Looking for wavelength " + str(wi[0])
+        try:
+            p = labels.index(wi[0])
+            #Add the intensity into the new intensities array at the correct location
+            intensities[p] += wi[1]
+        except ValueError:
+            continue
+    if scale:
+        #Scale so that the maximum intensity is 100
+        max_intensity = (255+255+255)*len(wavelength_intensities)
+        intensities = [a/max_intensity for a in intensities]
+        
+    return intensities
         
 
 class SpectrometerGUI(Tkinter.Tk):
@@ -79,7 +88,7 @@ class SpectrometerGUI(Tkinter.Tk):
         #Define properties of graph
         self.x_min_range = 380
         self.x_max_range = 750
-        self.x_spacing = 10
+        self.x_spacing = 1
         #Ensure the spacing is compatibe with the range
         check_spacing(self.x_min_range, self.x_max_range, self.x_spacing)
         
@@ -87,10 +96,13 @@ class SpectrometerGUI(Tkinter.Tk):
          
         
         Tkinter.Tk.__init__(self)
+        
         self.title = "Heriot-Watt University Pi Spectrometer"
-        self.wm_title = self.title
-        #self.label = Tkinter.Label(text="Image", compound="top")
-        #self.label.pack(side="top", padx=8, pady=8)
+        Tkinter.Tk.wm_title(self, self.title)
+        
+        logo = Tkinter.PhotoImage(file = "img/logo/favicon32.png")
+        self.tk.call('wm', 'iconphoto', self._w, logo)
+    
         self.iteration=0
         #self.UpdateImage(10)
 
@@ -265,6 +277,7 @@ class SpectrometerGUI(Tkinter.Tk):
             #print [avr, avg, avb, intensity, wavelength]
             averaged_array.append([avb, avg, avr])
             wavelengths.append([wavelength, intensity])
+            #print wavelengths
        # print averaged_array
         #print len(averaged_array)
         
