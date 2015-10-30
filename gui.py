@@ -3,13 +3,14 @@ from Tkinter import *
 from Tkinter import Tk
 from Tkinter import Button
 from picamera import PiCamera
+from plotting import *
 from picamera import array
 import time
 import cv2
 import Image
 import ImageTk
 import numpy as np
-
+import sys
 #************** Utility Functions *****************#
     
 '''
@@ -20,6 +21,45 @@ def blockshaped(arr, nrows, ncols):
     h, w = arr.shape
     return (arr.reshape(h//nrows, nrows, -1, ncols).swapaxes(1,2).reshape(-1, nrows, ncols))
 
+'''
+Make sure the spacing on the graph is ok to use.
+'''
+def check_spacing(min, max, spacing):
+    if ((float)(max - min)/spacing).is_integer:
+        print "Graph x spacing verified"
+        return
+    else:
+        print "Graph x spacing invalid"
+        sys.exit(0)
+        return #Dead code
+
+def make_comparator(comparator):
+    def compare(x,y):
+        if comparator(x,y):
+            return -1
+        elif comparator(y,x):
+            return 1
+        else:
+            return 0
+    return compare
+
+def wavelength_comparator(x, y):
+        wx = x[0]
+        wy = y[0]
+        if wx < wy:
+            return True
+        else:
+            return False
+
+def calc_intensities(labels, wavelength_intensities):
+    intensities = [0]*len(labels)
+    for wi in wavelength_intensities:
+        #Find the position on the graph where the intensity belongs
+        p = labels.index(wi[0])
+        #Add the intensity into the new intensities array at the correct location
+        intensities[p] += wi[1]
+        return intensities
+        
 
 class SpectrometerGUI(Tkinter.Tk):
     def __init__(self):
@@ -27,8 +67,23 @@ class SpectrometerGUI(Tkinter.Tk):
         self.res_y = 480 #Height
         self.capture_width = self.res_x
         self.capture_height = 2
+
+        #Define wavelengths of colours
+        self.violetwave = 380 #not sure
+        self.bluewave = 440
+        self.cyanwave = 490
+        self.greenwave = 510
+        self.yellowwave = 580
+        self.redwave = 687
+
+        #Define properties of graph
+        self.x_min_range = 380
+        self.x_max_range = 750
+        self.x_spacing = 10
+        #Ensure the spacing is compatibe with the range
+        check_spacing(self.x_min_range, self.x_max_range, self.x_spacing)
         
-        self.__capture_area = self.calculate_capture_area(return_tuple=False)
+        #self.__capture_area = self.calculate_capture_area(return_tuple=False)
          
         
         Tkinter.Tk.__init__(self)
@@ -70,7 +125,35 @@ class SpectrometerGUI(Tkinter.Tk):
 
         #self.bind("<Button-1>", )
         #self.pack()
+        
 
+
+    
+        
+        
+    def calc_x_axis(self):
+        #Convert the intensity and wavelength arrays into a suitable format for the graph
+        x_values = []
+        number_of_points = (self.x_max_range - self.x_min_range)/self.x_spacing
+        for i in range(0, number_of_points):
+            x_values.append(self.x_min_range + (i*self.x_spacing))
+        return x_values
+
+    def calc_y_axis(self, x_labels, wavelength_intensities):
+        #An array of size len(x_labels),
+        #containing the intensity value (0 - 100) for the particular wavelength.
+        
+        print "unordered intensities"
+        print wavelength_intensities
+        
+        wavelength_intensities.sort(make_comparator(wavelength_comparator))
+        
+        print "Ordered intensities"
+        print wavelength_intensities
+        
+        #for wi in wavelength_intensities:
+            
+        return 0
 
     def buttonClicked(self):
         self.analyseButton["text"] = "Analysing"
@@ -134,6 +217,12 @@ class SpectrometerGUI(Tkinter.Tk):
         img = capture.array
         b,g,r = cv2.split(img)
         img2 = cv2.merge((r,g,b))
+
+        #Draw image on canvas
+        #imgFromArray = Image.fromarray(img2)
+        #imgtk = ImageTk.PhotoImage(image=imgFromArray)
+        #self.canvas.create_image(self.res_x/2, self.res_y/2, image = imgtk)
+        
         height = len(img2)
         width = len(img2[0])
         #print blockshaped(img, 2, 640)
@@ -150,13 +239,65 @@ class SpectrometerGUI(Tkinter.Tk):
         print "Width: " + str(len(trimmedheight[0]))
 
         #Flip the array to ve can iterate through each column
-        flipped = 
+        flipped = np.rot90(trimmedheight)
+        averaged_array = []
+        intensities = []
+        wavelengths = []
+        #these are all estimates
+        
+        for col in flipped:
+            avr = 0
+            avg = 0
+            avb = 0
+            wavelength = 0.0
+            intensity = 0.0
+            for pix in col:
+                avr += pix[0]
+                avg += pix[1]
+                avb += pix[2]
+            #Average the pixels in each column
+            avr = avr/len(col)
+            avg = avg/len(col)
+            avb = avb/len(col)
+            intensity = (avr + avg + avb)
+            intensities.append(intensity)
+            wavelength = self.colour_to_wavelength(avr, avg, avb)
+            #print [avr, avg, avb, intensity, wavelength]
+            averaged_array.append([avb, avg, avr])
+            wavelengths.append([wavelength, intensity])
+       # print averaged_array
+        #print len(averaged_array)
+        
+        x_values = self.calc_x_axis()
+        y_values = calc_intensities(x_values, wavelengths)
+        
+        barplot(x_values, y_values)
+        #print flipped
 
         #trimmedwidth = np.dsplit(trimmedheight, 3)
         #print "Height: " + str(len(trimmedwidth[0]))
         #print "Width: " + str(len(trimmedwidth[0][0]))
+        camera.close()
 
-        
+    def colour_to_wavelength(self, avr, avg, avb):
+        #Try to approximate the wavelengths of colours in each pixel
+        #if between violet and blue
+        if(avr > avg and avb > avg and avb > avr):
+            wavelength = (avr/(avr+avb))*(self.bluewave-self.violetwave) + self.violetwave
+        #if between blue and cyan
+        elif(avg > avr and avb > avr and avb > avg):
+            wavelength = (avg/(avg+avb))*(self.cyanwave-self.bluewave) + self.bluewave
+        #if between cyan and green
+        elif(avg > avb and avb > avr and avg > avb):
+            wavelength = (avb/(avg+avb))*(self.greenwave-self.cyanwave)+ self.cyanwave
+        #if betwenn green and yellow
+        elif(avg > avb and avr > avb and avg > avr):
+            wavelength = (avr/(avr+avg))*(self.yellowwave - self.greenwave) + self.greenwave
+        #if between yellow and red
+        elif(avr > avb and avg > avb and avr > avg):
+            wavelength = (avg/(avr+avg))*(self.redwave- self.yellowwave) + self.yellowwave
+        else: wavelength = 0
+        return wavelength
         
 if __name__ == "__main__":
     app = SpectrometerGUI()
