@@ -11,6 +11,7 @@ import Image
 import ImageTk
 import numpy as np
 import sys
+from matplotlib import pyplot
 #************** Utility Functions *****************#
     
 '''
@@ -50,24 +51,30 @@ def wavelength_comparator(x, y):
             return True
         else:
             return False
-
-def calc_intensities(labels, wavelength_intensities, scale = False):
-    intensities = [0]*len(labels)
-    for wi in wavelength_intensities:
-        #Find the position on the graph where the intensity belongs
-        #print "Looking for wavelength " + str(wi[0])
-        try:
-            p = labels.index(wi[0])
-            #Add the intensity into the new intensities array at the correct location
-            intensities[p] += wi[1]
-        except ValueError:
-            continue
-    if scale:
-        #Scale so that the maximum intensity is 100
-        max_intensity = (255+255+255)*len(wavelength_intensities)
-        intensities = [a/max_intensity for a in intensities]
+'''
+Multiple data points may have the same wavelength, in such a case the data points
+should be combined into one, with their intensities added togethe.
+'''
+def calc_intensities(wavelengths, intensities):
+    unique_wavelengths = {}
+    insertions = {}
+    for i,wavelength in enumerate(wavelengths):
+        if wavelength not in unique_wavelengths:
+            unique_wavelengths[wavelength] = intensities[i]
+            insertions[wavelength] = 1
+        else:
+            unique_wavelengths[wavelength] += intensities[i]
+            insertions[wavelength] += 1
+    wavelengths = []
+    intensities = []
+    for key,value in enumerate(unique_wavelengths):
+        value = value / insertions.get(key,1)
+        print [key,value, insertions.get(key,1)]
+    for key,value in enumerate(unique_wavelengths):
+        wavelengths.append(key)
+        intensities.append(value)
         
-    return intensities
+    return [wavelengths, intensities]
         
 
 class SpectrometerGUI(Tkinter.Tk):
@@ -97,8 +104,7 @@ class SpectrometerGUI(Tkinter.Tk):
         
         Tkinter.Tk.__init__(self)
         
-        self.title = "Heriot-Watt University Pi Spectrometer"
-        Tkinter.Tk.wm_title(self, self.title)
+        Tkinter.Tk.wm_title(self, "Heriot-Watt University Pi Spectrometer")
         
         logo = Tkinter.PhotoImage(file = "img/logo/favicon32.png")
         self.tk.call('wm', 'iconphoto', self._w, logo)
@@ -142,35 +148,17 @@ class SpectrometerGUI(Tkinter.Tk):
 
     
         
-        
-    def calc_x_axis(self):
-        #Convert the intensity and wavelength arrays into a suitable format for the graph
-        x_values = []
-        number_of_points = (self.x_max_range - self.x_min_range)/self.x_spacing
-        for i in range(0, number_of_points):
-            x_values.append(self.x_min_range + (i*self.x_spacing))
-        return x_values
 
-    def calc_y_axis(self, x_labels, wavelength_intensities):
-        #An array of size len(x_labels),
-        #containing the intensity value (0 - 100) for the particular wavelength.
+    def draw_line_graph(self, wavelengths, intensities):
         
-        print "unordered intensities"
-        print wavelength_intensities
-        
-        wavelength_intensities.sort(make_comparator(wavelength_comparator))
-        
-        print "Ordered intensities"
-        print wavelength_intensities
-        
-        #for wi in wavelength_intensities:
-            
-        return 0
+        pyplot.plot(wavelengths,intensities,'ro')
+        pyplot.axis([430,650,0,1000])
+        pyplot.show()
 
+    
     def buttonClicked(self):
         self.analyseButton["text"] = "Analysing"
         self.analyseButton["state"] = 'disabled'
-        self.doAnalysis()
         self.capture_capture_area()
         self.analyseButton["text"] = "Analyse"
         self.analyseButton["state"] = "normal"
@@ -201,8 +189,6 @@ class SpectrometerGUI(Tkinter.Tk):
         camera.close()
         return imgtk
 
-    def doAnalysis(self):
-        return
 
     def calculate_capture_area(self, return_tuple = True):
         #TODO: Check if we chould be using the bottom left as 0,0
@@ -227,16 +213,15 @@ class SpectrometerGUI(Tkinter.Tk):
         capture = array.PiRGBArray(camera)
         camera.capture(capture, format = "bgr")
         img = capture.array
-        b,g,r = cv2.split(img)
-        img2 = cv2.merge((r,g,b))
+
 
         #Draw image on canvas
         #imgFromArray = Image.fromarray(img2)
         #imgtk = ImageTk.PhotoImage(image=imgFromArray)
         #self.canvas.create_image(self.res_x/2, self.res_y/2, image = imgtk)
         
-        height = len(img2)
-        width = len(img2[0])
+        height = len(img)
+        width = len(img[0])
         #print blockshaped(img, 2, 640)
         
         #The amount of rows to be removed from the top
@@ -245,12 +230,12 @@ class SpectrometerGUI(Tkinter.Tk):
         #The amount of rows to be kept, after the above has been removed.
         keep_middle = self.capture_height
         
-        trimmedheight = img2[remove_top:] #Remove first x rows
+        trimmedheight = img[remove_top:] #Remove first x rows
         trimmedheight = trimmedheight[:keep_middle] #Keep first x rows
         print "Height: " + str(len(trimmedheight))
         print "Width: " + str(len(trimmedheight[0]))
 
-        #Flip the array to ve can iterate through each column
+        #Flip the array so we can iterate through each column
         flipped = np.rot90(trimmedheight)
         averaged_array = []
         intensities = []
@@ -261,36 +246,69 @@ class SpectrometerGUI(Tkinter.Tk):
             avr = 0
             avg = 0
             avb = 0
-            wavelength = 0.0
-            intensity = 0.0
+           
+            
+            
             for pix in col:
-                avr += pix[0]
+                avr += pix[2]
                 avg += pix[1]
-                avb += pix[2]
+                avb += pix[0]
+                
             #Average the pixels in each column
             avr = avr/len(col)
             avg = avg/len(col)
             avb = avb/len(col)
-            intensity = (avr + avg + avb)
+            intensity = avr + avg + avb / 3
+            
+            hue = self.rbg_to_hsl(avr, avg, avb)
+            print hue
+            scaled_hue = -hue * (22.0/27.0) 
+            wavelength = scaled_hue + 650.0
+            
+            print [avr, avg, avb, wavelength]
+            
+            wavelengths.append(wavelength)
             intensities.append(intensity)
-            wavelength = self.colour_to_wavelength(avr, avg, avb)
-            #print [avr, avg, avb, intensity, wavelength]
-            averaged_array.append([avb, avg, avr])
-            wavelengths.append([wavelength, intensity])
             #print wavelengths
        # print averaged_array
         #print len(averaged_array)
-        
-        x_values = self.calc_x_axis()
-        y_values = calc_intensities(x_values, wavelengths)
-        
-        barplot(x_values, y_values)
+        calded = calc_intensities(wavelengths, intensities)
+        self.draw_line_graph(calded[0], calded[1])
         #print flipped
 
         #trimmedwidth = np.dsplit(trimmedheight, 3)
         #print "Height: " + str(len(trimmedwidth[0]))
         #print "Width: " + str(len(trimmedwidth[0][0]))
         camera.close()
+
+    def rbg_to_hsl(self, r,g,b):
+        R = r/255.0
+        G = g/255.0
+        B = b/255.0
+        print [R,G,B]
+        Cmax = max(R,G,B)
+        Cmin = min(R,G,B)
+        delta = Cmax - Cmin
+
+        hue = 0
+        saturation = 0
+        lightness = (Cmax + Cmin) /2
+
+        if(Cmax == Cmin):
+            hue = saturation = 0 #achromatic
+        else:
+            d = Cmax - Cmin
+            saturation = lightness > 0.5 if d / (2 - Cmax - Cmin) else d / (Cmax + Cmin);
+            if(Cmax == R):
+                hue = (G - B) / d + (G < B if 6 else 0)
+            if(Cmax == G):
+                hue = (B - R) / d + 2
+            if(Cmax == B):
+                hue = (R - G) / d + 4
+            hue /=6
+        hue = hue * 360
+        return hue
+                
 
     def colour_to_wavelength(self, avr, avg, avb):
         #Try to approximate the wavelengths of colours in each pixel
