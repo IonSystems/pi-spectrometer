@@ -3,15 +3,22 @@ from Tkinter import *
 from Tkinter import Tk
 from Tkinter import Button
 from picamera import PiCamera
-from plotting import *
 from picamera import array
 import time
+import gc
 import cv2
 import Image
 import ImageTk
 import numpy as np
 import sys
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot
+import pylab
+from PIL import Image
+import webbrowser
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+
 #************** Utility Functions *****************#
     
 '''
@@ -56,24 +63,23 @@ Multiple data points may have the same wavelength, in such a case the data point
 should be combined into one, with their intensities added togethe.
 '''
 def calc_intensities(wavelengths, intensities):
-    unique_wavelengths = {}
-    insertions = {}
-    for i,wavelength in enumerate(wavelengths):
-        if wavelength not in unique_wavelengths:
-            unique_wavelengths[wavelength] = intensities[i]
-            insertions[wavelength] = 1
-        else:
-            unique_wavelengths[wavelength] += intensities[i]
-            insertions[wavelength] += 1
+    currentWavelength = 430
+    
+    increment = 2
+
+    values = {}
+
+    while currentWavelength < 650:
+        for i,wavelength in enumerate(wavelengths):
+            if wavelength > currentWavelength and wavelength < currentWavelength + increment:
+               values[currentWavelength + (increment / 2)] = values.get(currentWavelength + (increment / 2),1) + 1
+        currentWavelength += increment
+
     wavelengths = []
     intensities = []
-    for key,value in enumerate(unique_wavelengths):
-        value = value / insertions.get(key,1)
-        print [key,value, insertions.get(key,1)]
-    for key,value in enumerate(unique_wavelengths):
-        wavelengths.append(key)
-        intensities.append(value)
-        
+    for k,v in values.items():
+        wavelengths.append(k)
+        intensities.append(v)
     return [wavelengths, intensities]
         
 
@@ -150,10 +156,26 @@ class SpectrometerGUI(Tkinter.Tk):
         
 
     def draw_line_graph(self, wavelengths, intensities):
+
+        majorLocator = MultipleLocator(20)
+        majorFormatter = FormatStrFormatter('%d')
+        minorLocator = MultipleLocator(2)        
         
-        pyplot.plot(wavelengths,intensities,'ro')
-        pyplot.axis([430,650,0,1000])
+        pyplot.axis([430,650,0,max(intensities)])
+
+        fig, ax = pyplot.subplots()
+        pyplot.plot(wavelengths,intensities)
+        ax.xaxis.set_major_locator(majorLocator)
+        ax.xaxis.set_major_formatter(majorFormatter)
+        ax.xaxis.set_minor_locator(minorLocator)
+        pyplot.xlabel("Wavelength")
+        pyplot.ylabel("Intensity")
+        
         pyplot.show()
+        pyplot.savefig('/home/pi/spectrometer/graph.png')
+        webbrowser.open('/home/pi/spectrometer/graph.png')
+       
+                
 
     
     def buttonClicked(self):
