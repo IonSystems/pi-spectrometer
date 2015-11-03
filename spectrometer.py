@@ -2,7 +2,6 @@ from camera import Camera
 from colourconverter import ColourConverter
 import numpy as np
 
-
 import utils
 
 class Spectrometer:
@@ -13,16 +12,32 @@ class Spectrometer:
         self.capture_height = 2
         
     def capture_capture_area(self, img):
-                
+        #camera = PiCamera()
+        #camera.resolution = (self.res_x, self.res_y)
+        #capture = array.PiRGBArray(camera)
+        #camera.capture(capture, format = "bgr")
+        #img = capture.array
+        img = self.camera.get_image()
+
+        #Draw image on canvas
+        #imgFromArray = Image.fromarray(img2)
+        #imgtk = ImageTk.PhotoImage(image=imgFromArray)
+        #self.canvas.create_image(self.res_x/2, self.res_y/2, image = imgtk)
+        
+        height = len(img)
+        width = len(img[0])
+        #print blockshaped(img, 2, 640)
+        
         #The amount of rows to be removed from the top
         remove_top = (self.camera.res_x - self.capture_height)/2
         
         #The amount of rows to be kept, after the above has been removed.
-        
+        keep_middle = self.capture_height
         
         trimmedheight = img[remove_top:] #Remove first x rows
-        trimmedheight = trimmedheight[:self.capture_height] #Keep first x rows
-        
+        trimmedheight = trimmedheight[:keep_middle] #Keep first x rows
+        print "Height: " + str(len(trimmedheight))
+        print "Width: " + str(len(trimmedheight[0]))
 
         #Flip the array so we can iterate through each column
         flipped = np.rot90(trimmedheight)
@@ -49,20 +64,20 @@ class Spectrometer:
             avb = avb/len(col)
             intensity = avr + avg + avb / 3
             
-            hue = self.colourconverter.rbg_to_hsl(avr, avg, avb)
+            hue_lightness = self.colourconverter.rbg_to_hsl(avr, avg, avb)
             
-            wavelength = (-hue * (22.0/27.0)) +650
+            scaled_hue = -hue_lightness[0] * (22.0/27.0) 
+            wavelength = scaled_hue + 650.0
             
+            print [avr, avg, avb, wavelength]
             
-            print [avr, avg, avb, wavelength, hue]
-            if(hue > 0):
-                wavelengths.append(wavelength)
-                intensities.append(intensity)
+            wavelengths.append(wavelength)
+            intensities.append(hue_lightness[1])
             #print wavelengths
-        #print averaged_array
+       # print averaged_array
         #print len(averaged_array)
-        
-        return utils.calc_intensities(wavelengths, intensities)
+        calded = utils.calc_intensities(wavelengths, intensities)
+        return calded
         #print flipped
 
         #trimmedwidth = np.dsplit(trimmedheight, 3)
