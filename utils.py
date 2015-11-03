@@ -44,7 +44,7 @@ should be combined into one, with their intensities added togethe.
 def calc_intensities(wavelengths, intensities):
     currentWavelength = 430
     
-    increment = 1
+    increment = 5
 
     values = {}
 

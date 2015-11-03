@@ -17,7 +17,7 @@ class Spectrometer:
         #capture = array.PiRGBArray(camera)
         #camera.capture(capture, format = "bgr")
         #img = capture.array
-        img = self.camera.get_image()
+        #img = self.camera.get_image()
 
         #Draw image on canvas
         #imgFromArray = Image.fromarray(img2)

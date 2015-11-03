@@ -9,7 +9,7 @@ import Image
 import ImageTk
 import sys
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('SVG')
 from matplotlib import pyplot
 import pylab
 pylab.ion() #Turn on interactive graph
@@ -86,21 +86,29 @@ class SpectrometerGUI(Tkinter.Tk):
 
     def draw_line_graph(self, wavelengths, intensities):
 
-        #majorLocator = MultipleLocator(20)
-        #majorFormatter = FormatStrFormatter('%d')
-        #minorLocator = MultipleLocator(2)        
+        #Sort the lists
+        wavelengths, intensities = (list(t) for t in zip(*sorted(zip(wavelengths, intensities))))
+
+        Max = max(intensities) * 1.0
+        intensities[:] = [x / Max for x in intensities]
+        #for intensity in intensities:
+        #    intensity /= max(intensities)        
+
+        majorLocator = MultipleLocator(20)
+        majorFormatter = FormatStrFormatter('%d')
+        minorLocator = MultipleLocator(5)        
         
         pyplot.axis([self.x_min_range,self.x_max_range,0,max(intensities)])
 
-        #fig, ax = pyplot.subplots()
-        #pyplot.plot(wavelengths,intensities, 're')
+        fig, ax = pyplot.subplots()
+        #pyplot.plot(wavelengths,intensities)
         #pyplot.hist(wavelengths)
         pyplot.bar(wavelengths, intensities, width=1)
-        #ax.xaxis.set_major_locator(majorLocator)
-        #ax.xaxis.set_major_formatter(majorFormatter)
-        #ax.xaxis.set_minor_locator(minorLocator)
-        #pyplot.xlabel("Wavelength")
-        #pyplot.ylabel("Intensity")
+        ax.xaxis.set_major_locator(majorLocator)
+        ax.xaxis.set_major_formatter(majorFormatter)
+        ax.xaxis.set_minor_locator(minorLocator)
+        pyplot.xlabel("Wavelength")
+        pyplot.ylabel("Intensity")
         
         #pyplot.show()
         pyplot.savefig('/home/pi/spectrometer/graph.png')
@@ -126,7 +134,7 @@ class SpectrometerGUI(Tkinter.Tk):
         #self.canvas.create_image(self.spectrometer.camera.res_x/2, self.spectrometer.camera.res_y/2, image = imgtk)
         
         self.canvas.itemconfig(self.image_on_canvas, image = self.tk_image)
-        self.after(delay, self.UpdateImage, 5000)
+        self.after(delay, self.UpdateImage, 2000)
 
         
 if __name__ == "__main__":
