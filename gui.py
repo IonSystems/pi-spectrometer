@@ -19,18 +19,19 @@ from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
 import utils
 from spectrometer import Spectrometer
+from threading import Thread
 
 class SpectrometerGUI(Tkinter.Tk):
     def __init__(self, spectrometer):
-        self.rectangle = 0        
+             
         self.spectrometer = spectrometer
        
         #Define properties of graph
         self.x_min_range = 430
         self.x_max_range = 650
-        self.box_width = self.spectrometer.camera.res_x
-        self.box_height = 2
-        self.box_x = 0
+        self.box_width = self.spectrometer.camera.res_x - 100
+        self.box_height = 5
+        self.box_x = 50
         self.box_y = self.spectrometer.camera.res_y/2 - self.box_height/2
         
         
@@ -39,132 +40,161 @@ class SpectrometerGUI(Tkinter.Tk):
         Tkinter.Tk.__init__(self)
         
         Tkinter.Tk.wm_title(self, "Heriot-Watt University Pi Spectrometer")
+
+        
         
         logo = Tkinter.PhotoImage(file = "img/logo/favicon32.png")
         self.tk.call('wm', 'iconphoto', self._w, logo)
     
-        self.iteration=0
-        #self.UpdateImage(10)   
-        self.canvas = Canvas(self, width = self.spectrometer.camera.res_x, height = self.spectrometer.camera.res_y, bd=2, bg="white")
-
-        self.analyseButton = Button(self, text = "Analyse", fg  = "blue", command = self.buttonClicked)
-        self.analyseButton.pack(side = BOTTOM)
-        self.widthPlusButton = Button(self, text = "Width +", fg  = "black", command = self.changeWidth(1, self.canvas))
-        self.widthPlusButton.pack(side = BOTTOM)
-        self.widthMinusButton = Button(self, text = "Width -", fg  = "red", command = self.changeWidth(-1, self.canvas))
-        self.widthMinusButton.pack(side = BOTTOM)
-        self.heightPlusButton = Button(self, text = "Height +", fg  = "black", command = self.changeHeight(1, self.canvas))
-        self.heightPlusButton.pack(side = BOTTOM)
-        self.heightMinusButton = Button(self, text = "Height -", fg  = "red", command = self.changeHeight(-1, self.canvas))
-        self.heightMinusButton.pack(side = BOTTOM)
-        self.xPositionPlusButton = Button(self, text = "X_Position +", fg  = "black", command = self.changeXPosition(1, self.canvas))
-        self.xPositionPlusButton.pack(side = BOTTOM)
-        self.xPositionMinusButton = Button(self, text = "X_Postition -", fg  = "red", command = self.changeXPosition(-1, self.canvas))
-        self.xPositionMinusButton.pack(side = BOTTOM)
-        self.yPositionPlusButton = Button(self, text = "Y_Postition +", fg  = "black", command = self.changeYPosition(1, self.canvas))
-        self.yPositionPlusButton.pack(side = BOTTOM)
-        self.yPositionMinusButton = Button(self, text = "Y_Position -", fg  = "red", command = self.changeYPosition(-1, self.canvas))
-        self.yPositionMinusButton.pack(side = BOTTOM)
-        self.spectrum = Tkinter.Label(text="Spectrum", compound = "top")
-        self.spectrum.pack(side="top", padx=8, pady = 8)
-
+        
+        self.canvas = Canvas(self, width = self.spectrometer.camera.res_x, height = self.spectrometer.camera.res_y, bg="white")
+        self.canvas.grid(row = 0, column = 0)
         self.image = self.spectrometer.camera.get_image()
         b,g,r = cv2.split(self.image)
         img2 = cv2.merge((r,g,b))
         imgFromArray = Image.fromarray(img2)
         self.tk_image = ImageTk.PhotoImage(image=imgFromArray)
-        
-
-        
         self.image_on_canvas = self.canvas.create_image(self.spectrometer.camera.res_x/2, self.spectrometer.camera.res_y/2, image = self.tk_image)
        
+        self.rectangle = self.canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height, outline='white')
+
+
+        f = Frame(self)
+        f.grid(row = 1, column = 0)
+
+        f1 = Frame(f)
+        f1.grid(row = 0, column = 0)
+
+        
+        analyseButton = Button(f1, text = "Analyse", bg  = "blue", command = lambda : self.buttonClicked())
+        analyseButton.grid(column=0, row=0)
+
+
+
+        f2 = Frame(f)
+        f2.grid(row = 0, column = 1)
+
+        xPositionPlusButton = Button(f2, text = "Right", command = lambda : self.changeXPosition(1))
+        xPositionPlusButton.grid(column=2, row=1)
+        xPositionMinusButton = Button(f2, text = "Left",  command = lambda : self.changeXPosition(-1))
+        xPositionMinusButton.grid(column=0, row=1)
+        yPositionPlusButton = Button(f2, text = "Up",  command = lambda : self.changeYPosition(-1))
+        yPositionPlusButton.grid(column=1, row=0)
+        yPositionMinusButton = Button(f2, text = "Down", command = lambda : self.changeYPosition(1))
+        yPositionMinusButton.grid(column=1, row=2)
+        
+
+
+
+        f3 = Frame(f)
+        f3.grid(row = 0, column = 2)
+        
+        widthPlusButton = Button(f3, text = "Increase",  command = lambda : self.changeWidth(1))
+        widthPlusButton.grid(column=0, row=0)
+        widthMinusButton = Button(f3, text = "Decrease",  command = lambda : self.changeWidth(-1))
+        widthMinusButton.grid(column=0, row=2)
+        heightPlusButton = Button(f3, text = "Increase",  command = lambda : self.changeHeight(1))
+        heightPlusButton.grid(column=2, row=0)
+        heightMinusButton = Button(f3, text = "Decrease",  command = lambda : self.changeHeight(-1))
+        heightMinusButton.grid(column=2, row=2)
+        resetButton = Button(f3, text = "Reset", bg = 'red', command = lambda : self.reset())
+        resetButton.grid(column=1,row = 1)
+        w = Label(f3, fg = 'blue', text="Width")
+        w.grid(column= 0, row = 1)
+        h = Label(f3, fg = 'blue', text="Height")
+        h.grid(column= 2, row = 1)
+
         
         
-        self.rectangle = self.canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
-        self.canvas.pack()
+        
+        
        
-        self.UpdateImage(0)
+        self.camera_thread = Thread(target = UpdateImage, args=(0, self))
+        self.camera_thread.daemon = True
+        self.camera_thread.start()
+        
+
     
-        
-
-    def draw_line_graph(self, wavelengths, intensities):
-
-        #Sort the lists
-        wavelengths, intensities = (list(t) for t in zip(*sorted(zip(wavelengths, intensities))))
-
-        Max = max(intensities) * 1.0
-        intensities[:] = [x / Max for x in intensities]
-        #for intensity in intensities:
-        #    intensity /= max(intensities)        
-
-        majorLocator = MultipleLocator(20)
-        majorFormatter = FormatStrFormatter('%d')
-        minorLocator = MultipleLocator(5)        
-        
-        pyplot.axis([self.x_min_range,self.x_max_range,0,max(intensities)])
-
-        fig, ax = pyplot.subplots()
-        #pyplot.plot(wavelengths,intensities)
-        #pyplot.hist(wavelengths)
-        pyplot.bar(wavelengths, intensities, width=1)
-        ax.xaxis.set_major_locator(majorLocator)
-        ax.xaxis.set_major_formatter(majorFormatter)
-        ax.xaxis.set_minor_locator(minorLocator)
-        pyplot.xlabel("Wavelength")
-        pyplot.ylabel("Intensity")
-        
-        #pyplot.show()
-        pyplot.savefig('/home/pi/spectrometer/graph.png')
-        webbrowser.open('/home/pi/spectrometer/graph.png')
 
     
     def buttonClicked(self):
-        self.analyseButton["text"] = "Analysing"
-        self.analyseButton["state"] = 'disabled'
-        calded = self.spectrometer.capture_capture_area(self.image)
-        self.draw_line_graph(calded[0], calded[1])
-        self.analyseButton["text"] = "Analyse"
-        self.analyseButton["state"] = "normal"
+        arg1 = 0
+        self.analyse_thread = Thread(target = draw_line_graph, args=(arg1, self))
+        self.analyse_thread.daemon = True
+        self.analyse_thread.start()
 
         
-    def changeWidth(self, pixels, canvas):
-        self.box_width += pixels
-        #del self.rectangle
-        self.canvas.delete(self.rectangle)
-        self.rectangle = canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
-        #self.canvas.itemconfig(self.image_on_canvas, image = self.tk_image)
-    def changeHeight(self, pixels, canvas):
-        self.box_height += pixels
-        #del self.rectangle
-        self.canvas.delete(self.rectangle)
-        self.rectangle = canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
+    def changeWidth(self, pixels):
+        self.box_width += 20*pixels
+        self.box_x -= 10 * pixels
+        self.updateRectangle()
         
-    def changeXPosition(self, pixels, canvas):
-        self.box_x += 5*pixels
-        #del self.rectangle
-        self.canvas.delete(self.rectangle)
-        self.rectangle = canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
+    def changeHeight(self, pixels):
+        self.box_height += 10*pixels
+        self.box_y -= 5*pixels
+        self.updateRectangle()
         
-    def changeYPosition(self, pixels, canvas):
-        self.box_y += 5*pixels
-        #del self.rectangle
-        self.canvas.delete(self.rectangle)
-        self.rectangle = canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
+    def changeXPosition(self, pixels):
+        self.box_x += 10*pixels       
+        self.updateRectangle()
         
-    def UpdateImage(self, delay, event=None):
-        self.iteration += 1
+    def changeYPosition(self, pixels):
+        self.box_y += 10*pixels        
+        self.updateRectangle()
+        
+    def reset(self):
+        self.box_width = self.spectrometer.camera.res_x - 100
+        self.box_height = 5
+        self.box_x = 50
+        self.box_y = self.spectrometer.camera.res_y/2 - self.box_height/2
+        self.updateRectangle()
 
-        self.image = self.spectrometer.camera.get_image()
-        b,g,r = cv2.split(self.image)
+    def updateRectangle(self):        
+        self.canvas.delete(self.rectangle)
+        self.rectangle = self.canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height, outline='white')
+
+def UpdateImage(delay, gui):
+    while(True):
+        gui.image = gui.spectrometer.camera.get_image()
+        b,g,r = cv2.split(gui.image)
         img2 = cv2.merge((r,g,b))
         imgFromArray = Image.fromarray(img2)
-        self.tk_image = ImageTk.PhotoImage(image=imgFromArray)
-        #self.canvas.create_image(self.spectrometer.camera.res_x/2, self.spectrometer.camera.res_y/2, image = imgtk)
-        
-        self.canvas.itemconfig(self.image_on_canvas, image = self.tk_image)
-        self.after(delay, self.UpdateImage, 2000)
+        gui.tk_image = ImageTk.PhotoImage(image=imgFromArray)
+        gui.canvas.itemconfig(gui.image_on_canvas, image = gui.tk_image)
+        time.sleep(1)
 
-        
+def draw_line_graph(arg1, gui):
+    wavelengths_intensities = gui.spectrometer.capture_capture_area(gui.image)
+    #Sort the lists
+    wavelengths, intensities = (list(t) for t in zip(*sorted(zip(wavelengths_intensities[0], wavelengths_intensities[1]))))
+
+    Max = max(intensities) * 1.0
+    intensities[:] = [x / Max for x in intensities]
+    #for intensity in intensities:
+    #    intensity /= max(intensities)        
+
+    majorLocator = MultipleLocator(20)
+    majorFormatter = FormatStrFormatter('%d')
+    minorLocator = MultipleLocator(5)        
+    
+    pyplot.axis([gui.x_min_range,gui.x_max_range,0,max(intensities)])
+
+    fig, ax = pyplot.subplots()
+    #pyplot.plot(wavelengths,intensities)
+    #pyplot.hist(wavelengths)
+    pyplot.bar(wavelengths, intensities, width=1)
+    ax.xaxis.set_major_locator(majorLocator)
+    ax.xaxis.set_major_formatter(majorFormatter)
+    ax.xaxis.set_minor_locator(minorLocator)
+    pyplot.xlabel("Wavelength")
+    pyplot.ylabel("Intensity")
+    
+    #pyplot.show()
+    pyplot.savefig('/home/pi/spectrometer/graph.png')
+    webbrowser.open('/home/pi/spectrometer/graph.png')
+    
+
+
 if __name__ == "__main__":
     spectrometer = Spectrometer()
     app = SpectrometerGUI(spectrometer)
