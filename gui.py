@@ -22,14 +22,18 @@ from spectrometer import Spectrometer
 
 class SpectrometerGUI(Tkinter.Tk):
     def __init__(self, spectrometer):
-        
+        self.rectangle = 0        
         self.spectrometer = spectrometer
        
         #Define properties of graph
         self.x_min_range = 430
         self.x_max_range = 650
+        self.box_width = self.spectrometer.camera.res_x
+        self.box_height = 2
+        self.box_x = 0
+        self.box_y = self.spectrometer.camera.res_y/2 - self.box_height/2
         
-        #self.__capture_area = self.calculate_capture_area(return_tuple=False)
+        
          
         
         Tkinter.Tk.__init__(self)
@@ -40,11 +44,27 @@ class SpectrometerGUI(Tkinter.Tk):
         self.tk.call('wm', 'iconphoto', self._w, logo)
     
         self.iteration=0
-        #self.UpdateImage(10)
+        #self.UpdateImage(10)   
+        self.canvas = Canvas(self, width = self.spectrometer.camera.res_x, height = self.spectrometer.camera.res_y, bd=2, bg="white")
 
         self.analyseButton = Button(self, text = "Analyse", fg  = "blue", command = self.buttonClicked)
         self.analyseButton.pack(side = BOTTOM)
-
+        self.widthPlusButton = Button(self, text = "Width +", fg  = "black", command = self.changeWidth(1, self.canvas))
+        self.widthPlusButton.pack(side = BOTTOM)
+        self.widthMinusButton = Button(self, text = "Width -", fg  = "red", command = self.changeWidth(-1, self.canvas))
+        self.widthMinusButton.pack(side = BOTTOM)
+        self.heightPlusButton = Button(self, text = "Height +", fg  = "black", command = self.changeHeight(1, self.canvas))
+        self.heightPlusButton.pack(side = BOTTOM)
+        self.heightMinusButton = Button(self, text = "Height -", fg  = "red", command = self.changeHeight(-1, self.canvas))
+        self.heightMinusButton.pack(side = BOTTOM)
+        self.xPositionPlusButton = Button(self, text = "X_Position +", fg  = "black", command = self.changeXPosition(1, self.canvas))
+        self.xPositionPlusButton.pack(side = BOTTOM)
+        self.xPositionMinusButton = Button(self, text = "X_Postition -", fg  = "red", command = self.changeXPosition(-1, self.canvas))
+        self.xPositionMinusButton.pack(side = BOTTOM)
+        self.yPositionPlusButton = Button(self, text = "Y_Postition +", fg  = "black", command = self.changeYPosition(1, self.canvas))
+        self.yPositionPlusButton.pack(side = BOTTOM)
+        self.yPositionMinusButton = Button(self, text = "Y_Position -", fg  = "red", command = self.changeYPosition(-1, self.canvas))
+        self.yPositionMinusButton.pack(side = BOTTOM)
         self.spectrum = Tkinter.Label(text="Spectrum", compound = "top")
         self.spectrum.pack(side="top", padx=8, pady = 8)
 
@@ -53,33 +73,16 @@ class SpectrometerGUI(Tkinter.Tk):
         img2 = cv2.merge((r,g,b))
         imgFromArray = Image.fromarray(img2)
         self.tk_image = ImageTk.PhotoImage(image=imgFromArray)
-        #Tkinter.Label(self, image = imgtk).pack()
+        
 
-        self.canvas = Tkinter.Canvas(self, width = self.spectrometer.camera.res_x, height = self.spectrometer.camera.res_y, bd=2, bg="white")
-
+        
         self.image_on_canvas = self.canvas.create_image(self.spectrometer.camera.res_x/2, self.spectrometer.camera.res_y/2, image = self.tk_image)
-        self.canvas.pack()
-        #self.canvas.create_polygon(self.__capture_area, fill="black")
-        #self.canvas.create_polygon(0,0,1,1,2,2, 40,40)
-        #self.canvas.create_rectangle(50, 25, 150, 75)
-        
-        x = (self.spectrometer.capture_height)/2
-        y = (self.spectrometer.capture_height)/2
-        w = self.spectrometer.capture_width
-        h = self.spectrometer.capture_height
-        self.canvas.create_rectangle(self.spectrometer.camera.res_x/2-self.spectrometer.capture_width/2, self.spectrometer.camera.res_y/2-self.spectrometer.capture_height/2, w, h)
-        #self.canvas.create_rectangle(x,y,w,h)
-        print "X:%s, Y:%s, W:%s, H:%s",x, y, w, h
-        #0,0 is top left
-        #left_offset, top_offset, width, height
-        #self.canvas.create_rectangle(10,30,630,470,fill="yellow")
-      
        
-
-        #self.bind("<Button-1>", )
-        #self.pack()
         
-
+        
+        self.rectangle = self.canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
+        self.canvas.pack()
+       
         self.UpdateImage(0)
     
         
@@ -123,6 +126,31 @@ class SpectrometerGUI(Tkinter.Tk):
         self.analyseButton["text"] = "Analyse"
         self.analyseButton["state"] = "normal"
 
+        
+    def changeWidth(self, pixels, canvas):
+        self.box_width += pixels
+        #del self.rectangle
+        self.canvas.delete(self.rectangle)
+        self.rectangle = canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
+        #self.canvas.itemconfig(self.image_on_canvas, image = self.tk_image)
+    def changeHeight(self, pixels, canvas):
+        self.box_height += pixels
+        #del self.rectangle
+        self.canvas.delete(self.rectangle)
+        self.rectangle = canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
+        
+    def changeXPosition(self, pixels, canvas):
+        self.box_x += 5*pixels
+        #del self.rectangle
+        self.canvas.delete(self.rectangle)
+        self.rectangle = canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
+        
+    def changeYPosition(self, pixels, canvas):
+        self.box_y += 5*pixels
+        #del self.rectangle
+        self.canvas.delete(self.rectangle)
+        self.rectangle = canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height)
+        
     def UpdateImage(self, delay, event=None):
         self.iteration += 1
 

@@ -9,7 +9,7 @@ class Spectrometer:
         self.camera = Camera()
         self.colourconverter = ColourConverter()
         self.capture_width = self.camera.res_x
-        self.capture_height = 2
+        self.capture_height = 10
         
     def capture_capture_area(self, img):
         #camera = PiCamera()
