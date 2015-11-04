@@ -2,6 +2,7 @@ import Tkinter
 from Tkinter import *
 from Tkinter import Tk
 from Tkinter import Button
+import Tix as tk
 import time
 import gc
 import cv2
@@ -25,7 +26,6 @@ class SpectrometerGUI(Tkinter.Tk):
     def __init__(self, spectrometer):
              
         self.spectrometer = spectrometer
-       
         #Define properties of graph
         self.x_min_range = 430
         self.x_max_range = 650
@@ -39,11 +39,15 @@ class SpectrometerGUI(Tkinter.Tk):
         
         Tkinter.Tk.__init__(self)
         
-        Tkinter.Tk.wm_title(self, "Heriot-Watt University Pi Spectrometer")
-
+        Tkinter.Tk.wm_title(self, "Heriot-Watt University Raspberry Pi Spectrometer")
+        #Tkinter.resizable(0,0)
         
         
         logo = Tkinter.PhotoImage(file = "img/logo/favicon32.png")
+        up = Tkinter.PhotoImage(file= "img/up.png")
+        down = Tkinter.PhotoImage(file = "img/down.png")
+        right = Tkinter.PhotoImage(file = "img/right.png")
+        left = Tkinter.PhotoImage(file = "img/left.png")
         self.tk.call('wm', 'iconphoto', self._w, logo)
     
         
@@ -66,43 +70,54 @@ class SpectrometerGUI(Tkinter.Tk):
         f1.grid(row = 0, column = 0)
 
         
-        analyseButton = Button(f1, text = "Analyse", bg  = "blue", command = lambda : self.buttonClicked())
-        analyseButton.grid(column=0, row=0)
-
+        analyseButton = Button(f1, text = "Graph", bg  = "steel blue", font = "Verdana 10 bold", command = lambda : self.buttonClicked())
+        analyseButton.grid(column=0, row=0, sticky = W)
 
 
         f2 = Frame(f)
-        f2.grid(row = 0, column = 1)
+        f2.grid(row = 0, column = 1, padx = 30)
 
-        xPositionPlusButton = Button(f2, text = "Right", command = lambda : self.changeXPosition(1))
-        xPositionPlusButton.grid(column=2, row=1)
-        xPositionMinusButton = Button(f2, text = "Left",  command = lambda : self.changeXPosition(-1))
-        xPositionMinusButton.grid(column=0, row=1)
-        yPositionPlusButton = Button(f2, text = "Up",  command = lambda : self.changeYPosition(-1))
-        yPositionPlusButton.grid(column=1, row=0)
-        yPositionMinusButton = Button(f2, text = "Down", command = lambda : self.changeYPosition(1))
-        yPositionMinusButton.grid(column=1, row=2)
         
 
+        xPositionPlusButton = Button(f2, image = right, command = lambda : self.changeXPosition(1))
+        xPositionPlusButton.grid(column=2, row=1)
+        xPositionMinusButton = Button(f2, image = left, command = lambda : self.changeXPosition(-1))
+        xPositionMinusButton.grid(column=0, row=1)
+        yPositionPlusButton = Button(f2, image = up, command = lambda : self.changeYPosition(-1))
+        yPositionPlusButton.grid(column=1, row=0)
+        yPositionMinusButton = Button(f2,image = down, command = lambda : self.changeYPosition(1))
+        yPositionMinusButton.grid(column=1, row=2)
+        g = Label(f2, text="Position", font = "Verdana 10 bold")
+        g.grid(column= 1, row = 1)
 
-
+        xPositionPlusButton.image = right
+        xPositionMinusButton.image = left
+        yPositionPlusButton.image = up
+        yPositionMinusButton.image = down
+        
         f3 = Frame(f)
         f3.grid(row = 0, column = 2)
+
+        f4 = Frame(f)
+        f4.grid(row = 0, column = 3, padx = 30)
+
+        f5 = Frame(f)
+        f5.grid(row = 0, column = 4)
         
-        widthPlusButton = Button(f3, text = "Increase",  command = lambda : self.changeWidth(1))
-        widthPlusButton.grid(column=0, row=0)
-        widthMinusButton = Button(f3, text = "Decrease",  command = lambda : self.changeWidth(-1))
-        widthMinusButton.grid(column=0, row=2)
-        heightPlusButton = Button(f3, text = "Increase",  command = lambda : self.changeHeight(1))
-        heightPlusButton.grid(column=2, row=0)
-        heightMinusButton = Button(f3, text = "Decrease",  command = lambda : self.changeHeight(-1))
-        heightMinusButton.grid(column=2, row=2)
-        resetButton = Button(f3, text = "Reset", bg = 'red', command = lambda : self.reset())
-        resetButton.grid(column=1,row = 1)
-        w = Label(f3, fg = 'blue', text="Width")
-        w.grid(column= 0, row = 1)
-        h = Label(f3, fg = 'blue', text="Height")
-        h.grid(column= 2, row = 1)
+        widthPlusButton = Button(f3, text = "+",  fg = 'red', font = "Verdana 12 bold", command = lambda : self.changeWidth(1))
+        widthPlusButton.grid(column=2, row=0)
+        widthMinusButton = Button(f3, text = "-",  font = "Verdana 12 bold", command = lambda : self.changeWidth(-1))
+        widthMinusButton.grid(column=0, row=0)
+        heightPlusButton = Button(f4, text = "+", fg = 'red', font = "Verdana 12 bold", command = lambda : self.changeHeight(1))
+        heightPlusButton.grid(column=1, row=0)
+        heightMinusButton = Button(f4, text = "-",  font = "Verdana 12 bold", command = lambda : self.changeHeight(-1))
+        heightMinusButton.grid(column=1, row=2)
+        resetButton = Button(f5, text = "Reset", bg = 'black', fg = 'red', font = "Verdana 10 bold", command = lambda : self.reset())
+        resetButton.grid(column=0,row = 0)
+        w = Label(f3, text="Width", font = "Verdana 10 bold")
+        w.grid(column= 1, row = 0)
+        h = Label(f4, text="Height", font = "Verdana 10 bold")
+        h.grid(column= 1, row = 1)
 
         
         
@@ -164,7 +179,7 @@ def UpdateImage(delay, gui):
         time.sleep(1)
 
 def draw_line_graph(arg1, gui):
-    wavelengths_intensities = gui.spectrometer.capture_capture_area(gui.image)
+    wavelengths_intensities = gui.spectrometer.capture_capture_area(gui.image, self.box_x, self.box_y, self.box_width, self.box_height)
     #Sort the lists
     wavelengths, intensities = (list(t) for t in zip(*sorted(zip(wavelengths_intensities[0], wavelengths_intensities[1]))))
 
