@@ -142,11 +142,21 @@ class SpectrometerGUI(Tkinter.Tk):
     def changeWidth(self, pixels):
         self.box_width += 20*pixels
         self.box_x -= 10 * pixels
+        if(self.box_width < 5):
+            self.box_x += 10*pixels
+        if(self.box_width + self.box_x > self.spectrometer.camera.res_x):
+            self.box_width -= 20*pixels
+            self.box_x += 10*pixels
         self.updateRectangle()
         
     def changeHeight(self, pixels):
         self.box_height += 10*pixels
         self.box_y -= 5*pixels
+        if(self.box_height < 2):
+            self.box_y += 5*pixels
+        if(self.box_height + self.box_y > self.spectrometer.camera.res_y):
+            self.box_height -= 10* pixels
+            self.box_y += 5*pixels
         self.updateRectangle()
         
     def changeXPosition(self, pixels):
@@ -154,7 +164,7 @@ class SpectrometerGUI(Tkinter.Tk):
         self.updateRectangle()
         
     def changeYPosition(self, pixels):
-        self.box_y += 10*pixels        
+        self.box_y += 5*pixels        
         self.updateRectangle()
         
     def reset(self):
@@ -166,6 +176,18 @@ class SpectrometerGUI(Tkinter.Tk):
 
     def updateRectangle(self):        
         self.canvas.delete(self.rectangle)
+        if(self.box_x < 0):
+            self.box_x = 0
+        if(self.box_y < 0):
+            self.box_y = 0
+        if(self.box_width < 5):
+            self.box_width = 5
+        if(self.box_height < 2):
+            self.box_height = 2
+        if(self.box_x + self.box_width > self.spectrometer.camera.res_x):
+            self.box_x = self.spectrometer.camera.res_x - self.box_width
+        if(self.box_y +self.box_height > self.spectrometer.camera.res_y):
+            self.box_y = self.spectrometer.camera.res_y - self.box_height
         self.rectangle = self.canvas.create_rectangle(self.box_x, self.box_y, self.box_x + self.box_width, self.box_y + self.box_height, outline='white')
 
 def UpdateImage(delay, gui):
@@ -179,7 +201,7 @@ def UpdateImage(delay, gui):
         time.sleep(1)
 
 def draw_line_graph(arg1, gui):
-    wavelengths_intensities = gui.spectrometer.capture_capture_area(gui.image, self.box_x, self.box_y, self.box_width, self.box_height)
+    wavelengths_intensities = gui.spectrometer.capture_capture_area(gui.image, gui.box_x, gui.box_y, gui.box_width, gui.box_height)
     #Sort the lists
     wavelengths, intensities = (list(t) for t in zip(*sorted(zip(wavelengths_intensities[0], wavelengths_intensities[1]))))
 
@@ -192,7 +214,7 @@ def draw_line_graph(arg1, gui):
     majorFormatter = FormatStrFormatter('%d')
     minorLocator = MultipleLocator(5)        
     
-    pyplot.axis([gui.x_min_range,gui.x_max_range,0,max(intensities)])
+    
 
     fig, ax = pyplot.subplots()
     #pyplot.plot(wavelengths,intensities)
@@ -201,6 +223,7 @@ def draw_line_graph(arg1, gui):
     ax.xaxis.set_major_locator(majorLocator)
     ax.xaxis.set_major_formatter(majorFormatter)
     ax.xaxis.set_minor_locator(minorLocator)
+    pyplot.axis([gui.x_min_range,gui.x_max_range,0,max(intensities)])
     pyplot.xlabel("Wavelength")
     pyplot.ylabel("Intensity")
     

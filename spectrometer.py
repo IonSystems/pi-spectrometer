@@ -11,7 +11,7 @@ class Spectrometer:
         self.capture_width = self.camera.res_x
         self.capture_height = 10
         
-    def capture_capture_area(self, img):
+    def capture_capture_area(self, img, x, y, width, height):
         #camera = PiCamera()
         #camera.resolution = (self.res_x, self.res_y)
         #capture = array.PiRGBArray(camera)
@@ -24,23 +24,17 @@ class Spectrometer:
         #imgtk = ImageTk.PhotoImage(image=imgFromArray)
         #self.canvas.create_image(self.res_x/2, self.res_y/2, image = imgtk)
         
-        height = len(img)
-        width = len(img[0])
+       
         #print blockshaped(img, 2, 640)
         
-        #The amount of rows to be removed from the top
-        remove_top = (self.camera.res_x - self.capture_height)/2
         
-        #The amount of rows to be kept, after the above has been removed.
-        keep_middle = self.capture_height
-        
-        trimmedheight = img[remove_top:] #Remove first x rows
-        trimmedheight = trimmedheight[:keep_middle] #Keep first x rows
-        print "Height: " + str(len(trimmedheight))
-        print "Width: " + str(len(trimmedheight[0]))
-
-        #Flip the array so we can iterate through each column
+        #Remove rows so we just have the box shape
+        trimmedheight = img[y:] #Remove first x rows
+        trimmedheight = trimmedheight[:height] #Keep first x rows 
         flipped = np.rot90(trimmedheight)
+        flipped = flipped[x:]
+        flipped = flipped[:width]
+
         averaged_array = []
         intensities = []
         wavelengths = []
