@@ -6,8 +6,8 @@ import Tix as tk
 import time
 import gc
 import cv2
-import Image
-import ImageTk
+from PIL import Image
+from PIL import ImageTk
 import sys
 import matplotlib
 matplotlib.use('SVG')
@@ -228,8 +228,8 @@ def draw_line_graph(arg1, gui):
     pyplot.ylabel("Intensity")
     
     #pyplot.show()
-    pyplot.savefig('/home/pi/spectrometer/graph.png')
-    webbrowser.open('/home/pi/spectrometer/graph.png')
+    pyplot.savefig('graph.png')
+    webbrowser.open('graph.png')
     
 
 
