@@ -31,7 +31,7 @@ class Spectrometer:
         #Remove rows so we just have the box shape
         trimmedheight = img[y:] #Remove first x rows
         trimmedheight = trimmedheight[:height] #Keep first x rows 
-        flipped = np.rot90(trimmedheight)
+        flipped = np.rot90(trimmedheight, k=3)
         flipped = flipped[x:]
         flipped = flipped[:width]
 
@@ -48,7 +48,7 @@ class Spectrometer:
             
             
             for pix in col:
-                avr += pix[2]
+                avr += pix[2]                
                 avg += pix[1]
                 avb += pix[0]
                 
@@ -56,7 +56,7 @@ class Spectrometer:
             avr = avr/len(col)
             avg = avg/len(col)
             avb = avb/len(col)
-            intensity = avr + avg + avb / 3
+            
             
             hue_lightness = self.colourconverter.rbg_to_hsl(avr, avg, avb)
             

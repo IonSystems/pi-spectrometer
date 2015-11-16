@@ -182,8 +182,8 @@ class SpectrometerGUI(Tkinter.Tk):
             self.box_y = 0
         if(self.box_width < 5):
             self.box_width = 5
-        if(self.box_height < 2):
-            self.box_height = 2
+        if(self.box_height < 3):
+            self.box_height = 3
         if(self.box_x + self.box_width > self.spectrometer.camera.res_x):
             self.box_x = self.spectrometer.camera.res_x - self.box_width
         if(self.box_y +self.box_height > self.spectrometer.camera.res_y):
